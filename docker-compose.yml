@@ -1,0 +1,263 @@
+# services:
+
+#   postgres:
+#     image: postgres:15-alpine
+#     container_name: querymind-postgres
+#     environment:
+#       POSTGRES_USER: querymind
+#       POSTGRES_PASSWORD: querymind_pass
+#       POSTGRES_DB: querymind_gateway
+#     ports:
+#       - "5432:5432"
+#     volumes:
+#       - querymind-postgres-data:/var/lib/postgresql/data
+#     networks:
+#       - querymind-net
+#     healthcheck:
+#       test: ["CMD-SHELL", "pg_isready -U querymind -d querymind_gateway"]
+#       interval: 10s
+#       timeout: 5s
+#       retries: 5
+
+#   redis:
+#     image: redis:7-alpine
+#     container_name: querymind-redis
+#     ports:
+#       - "6379:6379"
+#     volumes:
+#       - querymind-redis-data:/data
+#     networks:
+#       - querymind-net
+#     healthcheck:
+#       test: ["CMD", "redis-cli", "ping"]
+#       interval: 10s
+#       timeout: 5s
+#       retries: 5
+
+#   rabbitmq:
+#     image: rabbitmq:3-management-alpine
+#     container_name: querymind-rabbitmq
+#     ports:
+#       - "5672:5672"
+#       - "15672:15672"
+#     environment:
+#       RABBITMQ_DEFAULT_USER: querymind
+#       RABBITMQ_DEFAULT_PASS: querymind_pass
+#     volumes:
+#       - querymind-rabbitmq-data:/var/lib/rabbitmq
+#     networks:
+#       - querymind-net
+#     healthcheck:
+#       test: rabbitmq-diagnostics -q ping
+#       interval: 10s
+#       timeout: 5s
+#       retries: 5
+
+
+#   schema-service:
+#     build:
+#       context: .
+#       dockerfile: ./querymind-schema-service/Dockerfile
+#     container_name: querymind-schema-service
+#     env_file: ./querymind-schema-service/.env
+#     environment:
+#       AMQP_URL: amqp://querymind:querymind_pass@rabbitmq:5672/
+#       REDIS_URL: redis://redis:6379
+#       PORT: 8001
+#     ports:
+#       - "8001:8001"
+#     depends_on:
+#       rabbitmq:
+#         condition: service_healthy
+#       redis:
+#         condition: service_healthy
+#     networks:
+#       - querymind-net
+#     healthcheck:
+#       test: ["CMD-SHELL", "curl -f http://localhost:8001/health || exit 1"]
+#       interval: 15s
+#       timeout: 5s
+#       retries: 5
+#       start_period: 20s
+
+#   schema-celery:
+#     build:
+#       context: .
+#       dockerfile: ./querymind-schema-service/Dockerfile
+#     container_name: querymind-schema-celery
+#     command: celery -A tasks.celery_app worker -Q schema-celery -c 2 --loglevel=info
+#     env_file: ./querymind-schema-service/.env
+#     environment:
+#       AMQP_URL: amqp://querymind:querymind_pass@rabbitmq:5672/
+#       REDIS_URL: redis://redis:6379
+#     depends_on:
+#       schema-service:
+#         condition: service_healthy
+#     networks:
+#       - querymind-net
+
+#   schema-celery-beat:
+#     build:
+#       context: .
+#       dockerfile: ./querymind-schema-service/Dockerfile
+#     container_name: querymind-schema-celery-beat
+#     command: celery -A tasks.celery_app beat --loglevel=info
+#     env_file: ./querymind-schema-service/.env
+#     environment:
+#       AMQP_URL: amqp://querymind:querymind_pass@rabbitmq:5672/
+#       REDIS_URL: redis://redis:6379
+#     depends_on:
+#       schema-celery:
+#         condition: service_started
+#     networks:
+#       - querymind-net
+
+#   ai-service:
+#     build:
+#       context: .
+#       dockerfile: ./querymind-ai-service/Dockerfile
+#     container_name: querymind-ai-service
+#     env_file: ./querymind-ai-service/.env
+#     environment:
+#       AMQP_URL: amqp://querymind:querymind_pass@rabbitmq:5672/
+#       REDIS_URL: redis://redis:6379
+#       PORT: 8002
+#     ports:
+#       - "8002:8002"
+#     depends_on:
+#       rabbitmq:
+#         condition: service_healthy
+#       redis:
+#         condition: service_healthy
+#     networks:
+#       - querymind-net
+#     healthcheck:
+#       test: ["CMD-SHELL", "curl -f http://localhost:8002/health || exit 1"]
+#       interval: 15s
+#       timeout: 5s
+#       retries: 5
+#       start_period: 20s
+
+#   ai-celery:
+#     build:
+#       context: .
+#       dockerfile: ./querymind-ai-service/Dockerfile
+#     container_name: querymind-ai-celery
+#     command: celery -A tasks.celery_app worker -Q ai-celery -c 2 --loglevel=info
+#     env_file: ./querymind-ai-service/.env
+#     environment:
+#       AMQP_URL: amqp://querymind:querymind_pass@rabbitmq:5672/
+#       REDIS_URL: redis://redis:6379
+#     depends_on:
+#       ai-service:
+#         condition: service_healthy
+#     networks:
+#       - querymind-net
+
+#   execution-service:
+#     build:
+#       context: .
+#       dockerfile: ./querymind-execution-service/Dockerfile
+#     container_name: querymind-execution-service
+#     env_file: ./querymind-execution-service/.env
+#     environment:
+#       AMQP_URL: amqp://querymind:querymind_pass@rabbitmq:5672/
+#       REDIS_URL: redis://redis:6379
+#       PORT: 8003
+#     ports:
+#       - "8003:8003"
+#     depends_on:
+#       rabbitmq:
+#         condition: service_healthy
+#       redis:
+#         condition: service_healthy
+#     networks:
+#       - querymind-net
+#     healthcheck:
+#       test: ["CMD-SHELL", "curl -f http://localhost:8003/health || exit 1"]
+#       interval: 15s
+#       timeout: 5s
+#       retries: 5
+#       start_period: 20s
+
+#   execution-celery:
+#     build:
+#       context: .
+#       dockerfile: ./querymind-execution-service/Dockerfile
+#     container_name: querymind-execution-celery
+#     command: celery -A tasks.celery_app worker -Q exec-celery -c 2 --loglevel=info
+#     env_file: ./querymind-execution-service/.env
+#     environment:
+#       AMQP_URL: amqp://querymind:querymind_pass@rabbitmq:5672/
+#       REDIS_URL: redis://redis:6379
+#     depends_on:
+#       execution-service:
+#         condition: service_healthy
+#     networks:
+#       - querymind-net
+
+
+#   gateway:
+#     build:
+#       context: ./querymind-gateway
+#       dockerfile: Dockerfile
+#     container_name: querymind-gateway
+#     env_file: ./querymind-gateway/.env
+#     environment:
+#       AMQP_URL: amqp://querymind:querymind_pass@rabbitmq:5672/
+#       DB_HOST: postgres
+#       DB_PORT: 5432
+#       DB_USER: querymind
+#       DB_PASSWORD: querymind_pass
+#       DB_NAME: querymind_gateway
+#       AI_SERVICE_WS_URL: ws://ai-service:8002
+#       PORT: 8000
+#     ports:
+#       - "8000:8000"
+#     depends_on:
+#       postgres:
+#         condition: service_healthy
+#       rabbitmq:
+#         condition: service_healthy
+#       schema-service:
+#         condition: service_healthy
+#       ai-service:
+#         condition: service_healthy
+#       execution-service:
+#         condition: service_healthy
+#     networks:
+#       - querymind-net
+#     healthcheck:
+#       test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+#       interval: 15s
+#       timeout: 10s
+#       retries: 5
+#       start_period: 30s
+
+
+#   frontend:
+#     build:
+#       context: ./querymind-application-ui
+#       dockerfile: Dockerfile
+#       args:
+#         VITE_API_URL: http://localhost:8000
+#         VITE_WS_URL: ws://localhost:8000
+#     container_name: querymind-application-ui
+#     ports:
+#       - "3000:80"
+#     depends_on:
+#       gateway:
+#         condition: service_healthy
+#     networks:
+#       - querymind-net
+
+
+# volumes:
+#   querymind-postgres-data:
+#   querymind-redis-data:
+#   querymind-rabbitmq-data:
+
+
+# networks:
+#   querymind-net:
+#     driver: bridge
