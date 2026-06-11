@@ -1,0 +1,141 @@
+version: "3.8"
+
+services:
+  querymind-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    env_file: .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - DATABASE_URL=postgresql+asyncpg://querymind:querymind@postgres:5432/querymind_backend
+      - OLLAMA_URL=http://ollama:11434/api/chat
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - querymind-network
+    restart: unless-stopped
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8001 --workers 4 --loop uvloop"
+
+  celery-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - DATABASE_URL=postgresql+asyncpg://querymind:querymind@postgres:5432/querymind_backend
+    depends_on:
+      - rabbitmq
+      - redis
+      - postgres
+    networks:
+      - querymind-network
+    restart: unless-stopped
+    command: ["celery", "-A", "app.workers.celery_app", "worker", "--loglevel=info", "--concurrency=4"]
+
+  rabbitmq-consumer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env
+    environment:
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql+asyncpg://querymind:querymind@postgres:5432/querymind_backend
+    depends_on:
+      - rabbitmq
+      - celery-worker
+    networks:
+      - querymind-network
+    restart: unless-stopped
+    command: ["python", "rabbitmq_consumer.py"]
+
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: querymind_backend
+      POSTGRES_USER: querymind
+      POSTGRES_PASSWORD: querymind
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - querymind-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U querymind -d querymind_backend"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - querymind-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - querymind-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      - querymind-network
+    restart: unless-stopped
+    # Pull model on first start
+    entrypoint: >
+      sh -c "ollama serve & sleep 5 && ollama pull llama3.1:8b && wait"
+
+networks:
+  querymind-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
+  rabbitmq-data:
+  ollama-data:

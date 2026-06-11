@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - '8000:8000'
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://querymind:querymind@postgres:5432/querymind_auth
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=${JWT_SECRET}
+      - QUERYMIND_SERVICE_URL=http://querymind-service:8001/api/v1
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - querymind-net
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: querymind
+      POSTGRES_PASSWORD: querymind
+      POSTGRES_DB: querymind_auth
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U querymind -d querymind_auth']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - querymind-net
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - querymind-net
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  querymind-net:
+    external: true
+    name: querymind-net

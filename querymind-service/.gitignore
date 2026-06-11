@@ -1,0 +1,76 @@
+# .gitignore
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment variables (CRITICAL - contains secrets!)
+.env
+.env.local
+.env.*.local
+
+# Virtual environments
+venv/
+.venv/
+ENV/
+env/
+
+# IDE & Editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*.EXE
+
+# Database files
+*.sqlite3
+*.db
+test_db.db
+
+# Python testing
+pytest_cache/
+.coverage
+coverage.*
+htmlcov/
+.ruff_cache/
+.mypy_cache/
+
+# Distribution & Packaging
+dist/
+build/
+*.egg-info/
+*.egg
+
+# Compiled Python modules
+*.pyc
+*.pyo
+*.pyd
+
+# macOS & Windows specific files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+log.txt
+logs/
+
+# Local configuration
+*.local
+config.local.json
+
+# Database migrations (if not needed)
+# alembic/versions/*.py
+
+# Docker
+.docker/
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/
+
+# MyPy
+.mypy_cache/
+
+# Ruff
+.ruff_cache/
