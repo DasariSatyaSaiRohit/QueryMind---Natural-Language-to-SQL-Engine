@@ -1,6 +1,5 @@
 # QueryMind - Natural Language to SQL Engine
 
-![GitHub License](https://img.shields.io/badge/license-MIT-blue)
 ![Node.js](https://img.shields.io/badge/node.js-v20%2B-green)
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688)
