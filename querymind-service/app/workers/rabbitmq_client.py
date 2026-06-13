@@ -4,6 +4,7 @@ Async RabbitMQ client using aio-pika.
 Publishes history records to `history-persist-queue`.
 Falls back to synchronous DB write if publish fails.
 """
+from datetime import timedelta
 import json
 from typing import Any
 
@@ -22,14 +23,21 @@ class RabbitMQClient:
         self._channel: Channel | None = None
 
     async def connect(self) -> None:
-        self._connection = await aio_pika.connect_robust(settings.RABBITMQ_URL)
-        self._channel = await self._connection.channel()
-        await self._channel.declare_queue(settings.HISTORY_QUEUE, durable=True)
-        await self._channel.declare_queue(settings.HISTORY_DLQ, durable=True)
-        logger.info("rabbitmq.connected", url=settings.RABBITMQ_URL)
+        try:
+            logger.info("Connecting to RabbitMQ at ...")
+            self._connection = await aio_pika.connect_robust(settings.RABBITMQ_URL)
+            self._channel = await self._connection.channel()
+            await self._channel.declare_queue(settings.HISTORY_QUEUE, durable=True)
+            await self._channel.declare_queue(settings.HISTORY_DLQ, durable=True)
+            await self._channel.declare_queue(settings.INTROSPECTION_QUEUE, durable=True)
+            logger.info("rabbitmq.connected", Connection=self._connection, Channel=self._channel)
+        except Exception as exc:
+            logger.warning("rabbitmq.connect_failed", error=str(exc))
+            self._connection = None
+            self._channel = None
 
-    async def publish_history(
-        self, session_id: str, record: dict[str, Any], correlation_id: str | None = None
+    async def publish(
+        self, queue: str, session_id: str, record: dict[str, Any], correlation_id: str | None = None
     ) -> bool:
         if self._channel is None:
             logger.warning("rabbitmq.not_connected, falling back to sync persist")
@@ -46,11 +54,11 @@ class RabbitMQClient:
                 body=body,
                 content_type="application/json",
                 headers=headers,
-                expiration=str(settings.MESSAGE_EXPIRATION_MS),
+                expiration=timedelta(milliseconds=settings.MESSAGE_EXPIRATION_MS),
                 delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
             )
             await self._channel.default_exchange.publish(
-                message, routing_key=settings.HISTORY_QUEUE
+                message, routing_key=queue
             )
             logger.info("rabbitmq.published", session_id=session_id)
             return True

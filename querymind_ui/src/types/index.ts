@@ -39,8 +39,8 @@ export interface QueryResult {
 export interface QueryHistoryItem {
   id: string;
   session_id: string;
-  question: string;
-  sql: string;
+  user_input: string;
+  sql_query: string;
   status: 'success' | 'error';
   created_at: string;
   is_deleted: boolean;

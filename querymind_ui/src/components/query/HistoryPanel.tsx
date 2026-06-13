@@ -20,7 +20,7 @@ function HistoryItem({
   const [expanded, setExpanded] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const title = item.question.length > 50 ? item.question.slice(0, 50) + '…' : item.question;
+  const title = item.user_input.length > 50 ? item.user_input.slice(0, 50) + '…' : item.user_input;
 
   return (
     <div className="glass-card rounded-lg overflow-hidden">
@@ -48,19 +48,19 @@ function HistoryItem({
         <div className="border-t border-slate-700/50 p-3 space-y-3">
           <div>
             <p className="text-xs text-slate-500 mb-1">Question</p>
-            <p className="text-xs text-slate-300 leading-relaxed">{item.question}</p>
+            <p className="text-xs text-slate-300 leading-relaxed">{item.user_input}</p>
           </div>
-          {item.sql && (
+          {item.sql_query && (
             <div>
               <p className="text-xs text-slate-500 mb-1">SQL</p>
               <pre className="text-xs text-slate-400 font-mono bg-slate-900 rounded-lg p-2 overflow-x-auto whitespace-pre-wrap leading-relaxed">
-                {item.sql}
+                {item.sql_query}
               </pre>
             </div>
           )}
           <div className="flex gap-2">
             <button
-              onClick={e => { e.stopPropagation(); onRerun(item.sql); }}
+              onClick={e => { e.stopPropagation(); onRerun(item.sql_query); }}
               className="btn-secondary flex items-center gap-1.5 py-1.5 flex-1 justify-center text-xs"
             >
               <RotateCcw size={12} /> Re-run
@@ -87,7 +87,7 @@ function HistoryItem({
   );
 }
 
-export default function HistoryPanel({ history, onRerun, onDelete }: any) {
+export default function HistoryPanel({ history, onRerun, onDelete }: any) { 
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-2 mb-4">
@@ -102,7 +102,7 @@ export default function HistoryPanel({ history, onRerun, onDelete }: any) {
       ) : (
         <div className="flex-1 overflow-y-auto space-y-2 max-h-[calc(100vh-200px)]">
           {history.map((item:any) => (
-            <HistoryItem key={item.id} item={item} onRerun={onRerun} onDelete={onDelete} />
+            <HistoryItem key={item.history_id} item={item} onRerun={onRerun} onDelete={onDelete} />
           ))}
         </div>
       )}

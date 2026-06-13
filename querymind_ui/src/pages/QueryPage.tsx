@@ -10,7 +10,6 @@ import ResultsPanel from '../components/query/ResultsPanel';
 import HistoryPanel from '../components/query/HistoryPanel';
 
 export default function QueryPage() {
-  
   const location = useLocation();
   const stateData = location.state;
   const { connectionId } = useParams<{ connectionId: string }>();
@@ -28,37 +27,26 @@ export default function QueryPage() {
     setLoading,
     clearSession,
   } = useQueryStore();
-  
+
   const [question, setQuestion] = useState('');
   // const [connectionName, setConnectionName] = useState();
   const [sessionLoading, setSessionLoading] = useState(false);
-  
+
   useEffect(() => {
-    
     if (connectionId) {
       initSession(connectionId);
     }
   }, [connectionId]);
 
-
   const initSession = async (connId: string) => {
     setSessionLoading(true);
     try {
-      // Start session
       const sessionRes: any = await api.post<any>('/session/connect', {
         connection_id: connId,
       });
-
       setSession(sessionRes.data.data);
-      // Fetch connection info for display
-      // const connRes = await api.get<{ name: string }>(`/connections/${connId}`);
-      // setConnectionName(connRes.data.name || connId);
-
-      // Fetch existing history
-      const historyRes = await api.get<any>(`/query/history/${sessionRes.session_id}`);
-      setHistory(historyRes.data.data);
+      await getHistory();
     } catch (err: unknown) {
-
       const msg =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
         'Failed to connect to database';
@@ -69,17 +57,23 @@ export default function QueryPage() {
     }
   };
 
+  const getHistory = async () => {
+    const historyRes = await api.get<any>(`/query/history/${currentSession?.session_id}`);
+    setHistory(historyRes.data.data);
+  };
+
   const handleSubmit = async () => {
     if (!question.trim() || !currentSession) return;
     setLoading(true);
     try {
       const response = await api.post<any>('/query/ask', {
         session_id: currentSession.session_id,
-        type:stateData.db_type,
+        type: stateData.db_type,
         question: question.trim(),
       });
+
       const result = response.data;
-      if(result.success === false){
+      if (result.success === false) {
         toast.error(result.message || 'Query failed. Please try again.');
         return;
       }
@@ -89,15 +83,15 @@ export default function QueryPage() {
       const historyItem: QueryHistoryItem = {
         id: crypto.randomUUID(),
         session_id: currentSession.session_id,
-        question: question.trim(),
-        sql: result.sql,
+        user_input: question.trim(),
+        sql_query: result.sql,
         status: 'success',
         created_at: new Date().toISOString(),
         is_deleted: false,
       };
+
       addHistoryItem(historyItem);
     } catch (err: unknown) {
-
       const msg =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
         'Query failed. Please try again.';
@@ -108,8 +102,8 @@ export default function QueryPage() {
         const failedItem: QueryHistoryItem = {
           id: crypto.randomUUID(),
           session_id: currentSession.session_id,
-          question: question.trim(),
-          sql: '',
+          user_input: question.trim(),
+          sql_query: '',
           status: 'error',
           created_at: new Date().toISOString(),
           is_deleted: false,
@@ -143,7 +137,6 @@ export default function QueryPage() {
       await api.delete(`/query/history/${id}`);
       removeHistoryItem(id);
     } catch (error) {
-
       removeHistoryItem(id); // Optimistic delete
     }
   };

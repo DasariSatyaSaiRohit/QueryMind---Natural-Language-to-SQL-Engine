@@ -8,6 +8,7 @@ import asyncio
 import uuid
 from datetime import datetime
 
+from app.services.schema_service import introspect_and_cache
 from app.workers.celery_app import celery_app
 from app.core.logging import get_logger
 
@@ -27,6 +28,21 @@ def persist_history(self, session_id: str, record: dict):
     except Exception as exc:
         logger.error(
             "persist_history.failed",
+            session_id=session_id,
+            attempt=self.request.retries,
+            error=str(exc),
+        )
+        raise self.retry(exc=exc, countdown=60 * (2 ** self.request.retries))
+
+
+@celery_app.task(bind=True, name="introspect_schema", max_retries=3, acks_late=True)
+def introspect_schema(self, session_id: str, connection_string: str):
+    """Introspect DB schema and cache it in Redis."""
+    try:
+        asyncio.run(introspect_and_cache(session_id, connection_string))
+    except Exception as exc:
+        logger.error(
+            "introspect_schema.failed",
             session_id=session_id,
             attempt=self.request.retries,
             error=str(exc),

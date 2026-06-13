@@ -143,7 +143,7 @@ async def _call_huggingface(user_prompt: str) -> dict[str, Any]:
                 
             return _parse_ai_response(content)
     except Exception as e:
-        print(f"Hugging Face API call failed: {e}")
+        logger.error(f"Hugging Face API call failed", error=str(e))
         raise
 
 def _parse_ai_response(raw: str) -> dict[str, Any]:
@@ -247,7 +247,7 @@ async def generate_sql(
         await redis_set(cache_key, result, ttl=settings.QUERY_CACHE_TTL)
         return result
     except Exception as err:
-        print(err)
+        logger.error("generate_sql error", error=str(err))
         return {}
     
 

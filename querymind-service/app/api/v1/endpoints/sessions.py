@@ -7,12 +7,14 @@ from uuid import uuid4
 from datetime import datetime, timedelta
 import json
 import redis.asyncio as redis
+from app.core.config import settings
 
 from app.core.security import decrypt, encrypt
 from app.db.redis import get_redis
 from app.db.session import get_db
 from app.models.connection import Connection
-from app.services.schema_service import _sync_introspect
+from app.services.schema_service import _sync_introspect, introspect_and_cache
+from app.workers.rabbitmq_client import rabbitmq_client
 
 router = APIRouter(prefix="/session", tags=["session"])
 
@@ -72,6 +74,13 @@ async def connect_session(
         # 4. Update last_accessed
         connection.last_accessed = datetime.utcnow()
         await db.commit()
+
+        await rabbitmq_client.publish(
+            queue=settings.INTROSPECTION_QUEUE,
+            session_id=session_id,
+            record=session_data,
+            correlation_id=session_id
+        )
         
         return SessionConnectResponse(
             success=True,
@@ -83,6 +92,7 @@ async def connect_session(
         )
         
     except Exception as e:
+        logger.error("Error in /session/connect:", str(e))
         raise HTTPException(
             status_code=500,
             detail={'success': False, 'message': f'Failed to create session: {str(e)}'}

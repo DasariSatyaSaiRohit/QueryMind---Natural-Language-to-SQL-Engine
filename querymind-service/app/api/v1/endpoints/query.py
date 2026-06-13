@@ -119,7 +119,8 @@ async def ask_query(
             "cache_hit": generation.get("cache_hit", False),
             "correlation_id": request_id,
         }
-        await rabbitmq_client.publish_history(
+        await rabbitmq_client.publish(
+            queue=settings.HISTORY_QUEUE,
             session_id=body.session_id,
             record=history_record,
             correlation_id=request_id,
@@ -132,7 +133,7 @@ async def ask_query(
             "history_persisted": "async",
         }
     except Exception as e:
-        print("Error in /query/ask:", str(e))
+        logger.error("Error in /query/ask:",error=str(e))
         return {
             "success": False,
             "error": str(e),}

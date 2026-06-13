@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     RABBITMQ_URL: str 
     HISTORY_QUEUE: str = "history-persist-queue"
     HISTORY_DLQ: str = "history-persist-dlq"
+    INTROSPECTION_QUEUE: str = "introspect-queue"
     MESSAGE_EXPIRATION_MS: int = 300000  # 5 minutes
 
     # Celery

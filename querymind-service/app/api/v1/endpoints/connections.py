@@ -116,12 +116,12 @@ async def test_connection(
             body.url,
         )
         if not reachable:
-            print("Connection test failed: Unreachable")  # Debug print
+            logger.error("Connection test failed: Unreachable")  # Debug print
             return {"success": False, "message": "Cannot reach the database with the provided connection string."}
 
         return {"success": True, "message": "Connection is reachable."}
     except Exception as exc:
-        print("connections.test_connection_failed", str(exc))
+        logger.error("connections.test_connection_failed", error=str(exc))
         return {"success": False, "message": "Error testing connection: " + str(exc)}
         # raise HTTPException(
         #     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
