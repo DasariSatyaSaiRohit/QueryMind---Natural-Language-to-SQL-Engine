@@ -546,36 +546,4 @@ cd querymind-service
 pytest
 ```
 
-## 📝 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙋 Support & Community
-
-- **Issues**: [GitHub Issues](https://github.com/yourusername/querymind/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/querymind/discussions)
-- **Documentation**: [Full Documentation](https://docs.querymind.io)
-- **Email Support**: support@querymind.io
-
-## 🎯 Roadmap
-
-- [ ] Advanced SQL optimization
-- [ ] Query caching and execution statistics
-- [ ] Multi-table join inference
-- [ ] Data visualization support
-- [ ] Custom prompt templates
-- [ ] Team collaboration features
-- [ ] API rate limiting per tier
-- [ ] Advanced analytics dashboard
-- [ ] GraphQL support
-- [ ] Webhook integrations
-
-## 🙏 Acknowledgments
-
-- Built with [NestJS](https://nestjs.com/), [FastAPI](https://fastapi.tiangolo.com/), and [React](https://react.dev/)
-- AI powered by [Ollama](https://ollama.ai/) and [HuggingFace](https://huggingface.co/)
-- Inspired by the need for accessible database querying
-
----
-
-**Made with ❤️ by the QueryMind Team**
